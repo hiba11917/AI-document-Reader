@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Data / indexes / DBs
+data_files/
+faiss_index/
+*.db
+metadata.db
+global.index
+global_index_to_chunk_ids.npy
+
+# Logs
+*.log
+
+# IDEs / editors
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node / frontend
+node_modules/
+dist/
+build/
+
+# Misc
+*.pem
+*.key
+
+# Ignore compiled models or large artifacts
+*.pt
+*.bin
