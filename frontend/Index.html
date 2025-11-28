@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Document Reader - Q&A Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Document Reader</h1>
+            <p class="subtitle">Ask questions about your documents and get instant answers</p>
+        </header>
+
+        <div class="main-card">
+            <div class="error-message" id="errorMsg"></div>
+            <div class="success-message" id="successMsg"></div>
+
+            <form id="qaForm" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="document">Upload Document</label>
+                    <input type="file" id="document" name="document" accept=".pdf,.docx,.doc,.xlsx,.xls" required>
+                </div>
+                <div class="form-group">
+                    <label for="question">Ask a Question</label>
+                    <input type="text" id="question" name="question" placeholder="What is this document about?" required>
+                </div>
+                <button type="submit">Get Answer</button>
+            </form>
+        </div>
+ <div class="results-section" id="resultsSection">
+            <div class="answer-card" id="answerCard">
+                <h2>Answer</h2>
+                <p id="answerText"></p>
+            </div>
+
+            <div class="sources-card">
+                <h3>Sources</h3>
+                <ul class="sources-list" id="sourcesList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('qaForm');
+        const resultsSection = document.getElementById('resultsSection');
+        const answerText = document.getElementById('answerText');
+        const sourcesList = document.getElementById('sourcesList');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            
+            // Clear previous results
+            resultsSection.classList.remove('show');
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                const data = await response.json();
+
+                if (data.answer) {
+                    answerText.textContent = data.answer;
+                    
+                    sourcesList.innerHTML = '';
+                    if (data.sources && data.sources.length > 0) {
+                        data.sources.forEach(src => {
+                            const li = document.createElement('li');
+                            li.className = 'source-item';
+                            li.innerHTML = `
+                                <div class="source-filename">${src.filename}</div>
+                                <div class="source-meta">Page ${src.page} • Characters ${src.char_start}-${src.char_end}</div>
+                            `;
+                            sourcesList.appendChild(li);
+                        });
+                    }
+
+                    resultsSection.classList.add('show');
+                    successMsg.textContent = 'Answer generated successfully!';
+                    successMsg.classList.add('show');
+                } else {
+                    throw new Error(data.error || 'No answer generated');
+                }
+            } catch (error) {
+                errorMsg.textContent = '❌ Error: ' + error.message;
+                errorMsg.classList.add('show');
+            }
+        });
+    </script>
+</body>
+</html>
