@@ -106,7 +106,7 @@ def retrieve_top_chunks(query, top_k=TOP_K):
             
             chunk_id = mapping[idx]
             row = conn.execute(text("""
-                SELECT c.text, c.page, d.filename
+                SELECT c.text, c.page, c.char_start, c.char_end, d.filename
                 FROM chunks c JOIN documents d ON c.doc_id = d.id
                 WHERE c.id = :cid
             """), {"cid": chunk_id}).fetchone()
@@ -115,7 +115,9 @@ def retrieve_top_chunks(query, top_k=TOP_K):
                 results.append({
                     "text": row[0],
                     "page": row[1],
-                    "filename": row[2],
+                    "char_start": row[2],
+                    "char_end": row[3],
+                    "filename": row[4],
                     "score": float(dist)
                 })
             else:
@@ -160,22 +162,30 @@ Answer (with references to filenames and pages):"""
 # ---------------------------
 # Ask Ollama (streaming)
 # ---------------------------
-def ask_ollama(prompt, model=None, timeout=600):
-    """Query Ollama with streaming response"""
+def ask_ollama(prompt, model=None, timeout=600, stream=True):
+    """Query Ollama; supports streaming or buffered responses"""
     if model is None:
         model = LLM_MODEL
     
     try:
         response = requests.post(
             OLLAMA_URL,
-            json={"model": model, "prompt": prompt, "stream": True},
-            stream=True,
+            json={"model": model, "prompt": prompt, "stream": stream},
+            stream=stream,
             timeout=timeout
         )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"❌ Could not reach Ollama at {OLLAMA_URL}: {e}")
         return ""
+    
+    if not stream:
+        try:
+            data = response.json()
+            return data.get("response", "").strip()
+        except Exception as e:
+            print(f"❌ Error reading Ollama response: {e}")
+            return ""
     
     full_text = ""
     try:
@@ -201,26 +211,38 @@ def ask_ollama(prompt, model=None, timeout=600):
     print()  # Newline after streaming
     return full_text.strip()
 
+
+def answer_question(question, top_k=TOP_K, stream=False):
+    """Complete RAG pipeline and return structured result"""
+    retrieved = retrieve_top_chunks(question, top_k=top_k)
+    if not retrieved:
+        return {"answer": "", "sources": [], "prompt": "", "error": "No relevant chunks found."}
+    
+    prompt = build_prompt(question, retrieved)
+    answer = ask_ollama(prompt, stream=stream)
+    return {"answer": answer, "sources": retrieved, "prompt": prompt, "error": ""}
+
 # ---------------------------
 # RAG Pipeline
 # ---------------------------
 def rag_query(question):
     """Complete RAG pipeline: retrieve → prompt → generate"""
     print(f"\n🔎 Searching for: {question}")
+    result = answer_question(question, stream=True)
     
-    retrieved = retrieve_top_chunks(question)
-    if not retrieved:
-        print("❌ No relevant chunks found.")
+    if result.get("error"):
+        print(f"❌ {result['error']}")
         return
     
+    retrieved = result["sources"]
     print(f"✅ Found {len(retrieved)} relevant chunks\n")
     
-    prompt = build_prompt(question, retrieved)
+    prompt = result["prompt"]
     print("--- Prompt Preview ---")
     print(prompt[:500], "...\n")
     
     print("--- Generating Answer ---\n")
-    answer = ask_ollama(prompt)
+    answer = result["answer"]
     
     if answer:
         print("\n📚 Sources Used:")
