@@ -52,29 +52,30 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+            console.log("Form submitted");
             const formData = new FormData(form);
-            
             // Clear previous results
             resultsSection.classList.remove('show');
             errorMsg.classList.remove('show');
             successMsg.classList.remove('show');
 
             try {
-                const response = await fetch('/', {
+                console.log("Sending fetch to http://localhost:8000/api/ask");
+                const response = await fetch('http://localhost:8000/api/ask', {
                     method: 'POST',
                     body: formData
                 });
+                console.log("Fetch response received", response);
 
                 if (!response.ok) {
-                    throw new Error('Request failed');
+                    throw new Error('Request failed: ' + response.status + ' ' + response.statusText);
                 }
 
                 const data = await response.json();
+                console.log("Data received:", data);
 
                 if (data.answer) {
                     answerText.textContent = data.answer;
-                    
                     sourcesList.innerHTML = '';
                     if (data.sources && data.sources.length > 0) {
                         data.sources.forEach(src => {
@@ -87,7 +88,6 @@
                             sourcesList.appendChild(li);
                         });
                     }
-
                     resultsSection.classList.add('show');
                     successMsg.textContent = 'Answer generated successfully!';
                     successMsg.classList.add('show');
@@ -95,6 +95,7 @@
                     throw new Error(data.error || 'No answer generated');
                 }
             } catch (error) {
+                console.error("Fetch error:", error);
                 errorMsg.textContent = '❌ Error: ' + error.message;
                 errorMsg.classList.add('show');
             }
