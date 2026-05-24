@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: ai-doc-reader-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      # From inside Docker, Ollama runs on the Windows host rather than inside this container.
+      OLLAMA_URL: http://host.docker.internal:11434/api/generate
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/data_files:/app/data_files
+      - ./backend/faiss_index:/app/faiss_index
+      - ./backend/metadata.db:/app/metadata.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_BASE_URL: http://localhost:8000
+    container_name: ai-doc-reader-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    restart: unless-stopped

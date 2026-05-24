@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+sentence-transformers
+faiss-cpu
+sqlalchemy
+pymupdf
+python-docx
+pandas
+openpyxl
+xlrd
+requests
+python-dotenv
+pillow
+pytesseract
